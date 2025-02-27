@@ -539,3 +539,45 @@ function downloadXMI() {
     a.click();
     document.body.removeChild(a);
 }
+
+function saveXMIToServer() {
+    const xmi = generateXMI();
+    const blob = new Blob([xmi], { type: 'application/xml' });
+    const formData = new FormData();
+    formData.append('xmi', blob, 'diagram.xmi');
+    console.log(formData);
+    fetch('/generated', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(`Error: ${data.error}`);
+        } else {
+            alert('Archivo procesado correctamente');
+        }
+    })
+    .catch(error => {
+        alert(`Error: ${error}`);
+    });
+}
+
+function mostrarJava() {
+    saveXMIToServer();
+    fetch('/mostrar_clp')
+        .then(response => {
+            console.log("🔍 Respuesta del servidor:", response);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();  // Aquí podría fallar si no es JSON
+        })
+        .then(data => {
+            console.log("✅ Respuesta JSON recibida:", data);
+            document.getElementById('clpOutput').textContent = data.output;
+        })
+        .catch(error => {
+            console.error('❌ Error al obtener el CLP:', error);
+        });
+}

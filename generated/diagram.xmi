@@ -1,23 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
   <XMI xmi.version="2.1" xmlns:xmi="http://schema.omg.org/spec/XMI/2.1" xmlns:uml="http://www.omg.org/spec/UML/20090901">
   <uml:Model xmi:type="uml:Model" name="UMLModel">
+    <packagedElement xmi:type="uml:Class" name="f">
+    </packagedElement>
     <packagedElement xmi:type="uml:Class" name="a">
     </packagedElement>
-    <packagedElement xmi:type="uml:Class" name="b">
+    <packagedElement xmi:type="uml:Class" name="ss">
     </packagedElement>
-    <packagedElement xmi:type="uml:Class" name="c">
+    <packagedElement xmi:type="uml:Class" name="q">
     </packagedElement>
-    <packagedElement xmi:type="uml:Composition" memberEnd="a b">
-      <ownedEnd type="a" multiplicity1="1" />
-      <ownedEnd type="b" multiplicity2="*" />
-    </packagedElement>
-    <packagedElement xmi:type="uml:Composition" memberEnd="b c">
-      <ownedEnd type="b" multiplicity1="1" isOrdered="true" />
-      <ownedEnd type="c" multiplicity2="*" />
-    </packagedElement>
-    <packagedElement xmi:type="uml:Aggregation" memberEnd="c a">
-      <ownedEnd type="c" multiplicity1="1" />
+    <packagedElement xmi:type="uml:Composition" memberEnd="f a">
+      <ownedEnd type="f" multiplicity1="1" isOrdered="true" />
       <ownedEnd type="a" multiplicity2="*" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Composition" memberEnd="f ss">
+      <ownedEnd type="f" multiplicity1="*" />
+      <ownedEnd type="ss" multiplicity2="*" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Aggregation" memberEnd="a ss">
+      <ownedEnd type="a" multiplicity1="*" />
+      <ownedEnd type="ss" multiplicity2="*" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" memberEnd="a ss">
+      <ownedEnd type="a" multiplicity1="*" />
+      <ownedEnd type="ss" multiplicity2="*" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Association" memberEnd="f q">
+      <ownedEnd type="f" multiplicity1="1" />
+      <ownedEnd type="q" multiplicity2="*" />
+    </packagedElement>
+    <packagedElement xmi:type="uml:Generalization" memberEnd="f q">
     </packagedElement>
   </uml:Model>
 </XMI>
