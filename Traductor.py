@@ -74,9 +74,7 @@ def extract_directed_associations(root, class_dict):
         
                     if end_type == target and multiplicity_target == None:
                         multiplicity_target = owned_end.get('multiplicity2')
-                       
-                #print(multiplicity_source)
-                #print(multiplicity_target)    
+   
                 if source and target:
                     directed_associations.append({
                         'type': 'directedAssociation',
@@ -162,7 +160,7 @@ def extract_dependencies(root):
                     })
     return dependencies
 
-def extract_compositions(root):
+def extract_compositions(root, class_dict):
     compositions = []
     for elem in root.findall('.//packagedElement'):
         type_attr = elem.get('{http://schema.omg.org/spec/XMI/2.1}type')
@@ -171,21 +169,52 @@ def extract_compositions(root):
             if member_end:
                 whole, part = member_end.split()
                 owned_ends = elem.findall('ownedEnd')
+
                 multiplicity_target = None
-                for owned_end in owned_ends:
+                is_ordered = False  # Valor por defecto
+
+                for i, owned_end in enumerate(owned_ends):
                     end_type = owned_end.get('type')
+                    multiplicity = owned_end.attrib.get('multiplicity1') or owned_end.attrib.get('multiplicity2')
+                    ordered = owned_end.attrib.get('isOrdered', 'false') == 'true'
+
+                    #Tomar isOrdered SOLO del primer ownedEnd
+                    if i == 0:  
+                        is_ordered = ordered  
+
+                    # Multiplicidad siempre del part
                     if end_type == part:
-                        multiplicity_target = owned_end.get('multiplicity')
+                        multiplicity_target = multiplicity
+
                 if whole and part:
                     compositions.append({
                         'type': 'composition',
                         'whole': whole,
                         'part': part,
-                        'multiplicity': multiplicity_target
+                        'multiplicity': multiplicity_target,
+                        'isOrdered': is_ordered
                     })
+
+                    # **🔍 Decidir la estructura de datos en Java correctamente**
+                    collection_type = "TreeSet" if is_ordered else "ArrayList"
+
+                    if whole in class_dict:
+                        if multiplicity_target == "*":
+                            class_dict[whole]['attributes'].append({
+                                'name': f'{part.lower()}_Collection',
+                                'visibility': 'private',
+                                'type': f'{collection_type}<{part}>'
+                            })
+                        else:
+                            class_dict[whole]['attributes'].append({
+                                'name': f'{part.lower()}_Instance',
+                                'visibility': 'private',
+                                'type': f'{part}'
+                            })
+
     return compositions
 
-def extract_aggregations(root):
+def extract_aggregations(root, class_dict):
     aggregations = []
     for elem in root.findall('.//packagedElement'):
         type_attr = elem.get('{http://schema.omg.org/spec/XMI/2.1}type')
@@ -206,11 +235,19 @@ def extract_aggregations(root):
                         'part': part,
                         'multiplicity': multiplicity_target
                     })
+                    # Añadir atributo en la clase whole
+                    class_name = whole
+                    if class_name in class_dict:
+                        class_dict[class_name]['attributes'].append({
+                            'name': f'{part.lower()}_List',
+                            'visibility': 'private',
+                            'type': f'LinkedList<{part}>'
+                        })
     return aggregations
 
 def generate_clips_facts(classes, relationships):
     clips_facts = []
-
+    
     clips_facts.append('(deftemplate class\n   (slot name)\n   (multislot attributes)\n   (multislot operations))')
     clips_facts.append('(deftemplate attribute\n   (slot id)\n   (slot class-name)\n   (slot name)\n   (slot visibility)\n   (slot type))')
     clips_facts.append('(deftemplate operation\n   (slot id)\n   (slot class-name)\n   (slot name)\n   (slot visibility)\n   (slot type))')
@@ -218,7 +255,7 @@ def generate_clips_facts(classes, relationships):
     clips_facts.append('(deftemplate generalization\n   (slot parent)\n   (slot child))')
     clips_facts.append('(deftemplate directedAssociation\n   (slot source)\n   (slot target)\n   (slot multiplicity1)\n  (slot multiplicity2))')
     clips_facts.append('(deftemplate association\n   (slot source)\n   (slot target)\n   (slot multiplicity1)\n  (slot multiplicity2))')
-    clips_facts.append('(deftemplate composition\n   (slot whole)\n   (slot part)\n   (slot multiplicity))')
+    clips_facts.append('(deftemplate composition\n   (slot whole)\n   (slot part)\n   (slot multiplicity)\n   (slot isOrdered))')
     clips_facts.append('(deftemplate aggregation\n   (slot whole)\n   (slot part)\n   (slot multiplicity))')
 
     clips_facts.append('(deffacts initial-facts')
@@ -257,23 +294,32 @@ def generate_clips_facts(classes, relationships):
         elif rel['type'] == 'dependency':
             clips_facts.append(f'  (dependency (client {rel["client"]}) (supplier {rel["supplier"]}))')
         elif rel['type'] == 'composition':
-            clips_facts.append(f'  (composition (whole {rel["whole"]}) (part {rel["part"]}) (multiplicity {rel["multiplicity"]}))')
+            ordered_value = "true" if rel.get("ordered", False) else "false"
+            
+            clips_facts.append(f'  (composition (whole "{rel["whole"]}") (part "{rel["part"]}") '
+                       f'(multiplicity "{rel.get("multiplicity", "None")}") (isOrdered "{ordered_value}"))')
+
         elif rel['type'] == 'aggregation':
             clips_facts.append(f'  (aggregation (whole {rel["whole"]}) (part {rel["part"]}) (multiplicity {rel["multiplicity"]}))')
+
+            clips_facts.append(f'  (attribute (id "agg{rel["whole"]}_{rel["part"]}") (class-name "{rel["whole"]}") '
+                               f'(name "{rel["part"].lower()}List") (visibility "private") '
+                               f'(type "LinkedList<{rel["part"]}>"))')
+
 
     clips_facts.append(')')
     
     return clips_facts
 
 def write_clips_file(clips_facts, file_path):
-    with open(file_path, 'w') as file:
+    #print("LOS FACTOS: ",clips_facts)
+    with open(file_path, 'w', encoding='utf-8') as file:
         for fact in clips_facts:
             file.write(f'{fact}\n')
 ################################################################################
  # Agregar la regla al final del archivo
         file.write('''
 (defrule generate-java-code
-   
    ?class <- (class (name ?class-name) (attributes $?attributes) (operations $?operations))
    (generalization (parent ?class-name) (child ?x))
    =>
@@ -336,10 +382,6 @@ def write_clips_file(clips_facts, file_path):
 )
 ''')
 
-
-
-
-
 ##############################################################################            
 
 # Abre el archivo en modo lectura
@@ -356,8 +398,8 @@ try:
     directed_associations = extract_directed_associations(root, class_dict)
     associations = extract_associations(root)
     dependencies = extract_dependencies(root)
-    compositions = extract_compositions(root)
-    aggregations = extract_aggregations(root)
+    compositions = extract_compositions(root, class_dict)
+    aggregations = extract_aggregations(root, class_dict)
     
     relationships = generalizations + directed_associations + associations + dependencies + compositions + aggregations
  

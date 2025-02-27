@@ -33,42 +33,26 @@
 (deftemplate composition
    (slot whole)
    (slot part)
-   (slot multiplicity))
+   (slot multiplicity)
+   (slot isOrdered))
 (deftemplate aggregation
    (slot whole)
    (slot part)
    (slot multiplicity))
 (deffacts initial-facts
-  (attribute (id attr1) (class-name a) (name a) (visibility public) (type "int"))
-  (attribute (id attr2) (class-name a) (name b) (visibility public) (type "float[]"))
-  (attribute (id attr3) (class-name a) (name cList1) (visibility private) (type "HashSet<c>"))
-  (attribute (id attr4) (class-name a) (name aList3) (visibility private) (type "HashSet<a>"))
-  (operation (id op1) (class-name a) (name f) (visibility private) (type "void"))
-  (class (name a) (attributes attr1 attr2 attr3 attr4) (operations op1))
-  (attribute (id attr5) (class-name b) (name b1) (visibility private) (type "String"))
-  (operation (id op2) (class-name b) (name g) (visibility protected) (type "boolean[]"))
-  (operation (id op3) (class-name b) (name nc) (visibility private) (type "Integer"))
-  (class (name b) (attributes attr5) (operations op2 op3))
-  (attribute (id attr6) (class-name c) (name bList2) (visibility private) (type "HashSet<b>"))
-  (operation (id op4) (class-name c) (name w) (visibility private) (type "ArrayList<Float>"))
-  (class (name c) (attributes attr6) (operations op4))
-  (attribute (id attr7) (class-name d) (name bb) (visibility public) (type "String"))
-  (class (name d) (attributes attr7) (operations ))
-  (attribute (id attr8) (class-name e) (name c) (visibility private) (type "String[]"))
-  (attribute (id attr9) (class-name e) (name c2) (visibility private) (type "HashMap<Integer,e>"))
-  (class (name e) (attributes attr8 attr9) (operations ))
-  (generalization (parent a) (child b))
-  (directedAssociation (source a) (target c) (multiplicity1 1) (multiplicity2 *))
-  (directedAssociation (source c) (target b) (multiplicity1 1) (multiplicity2 *))
-  (directedAssociation (source a) (target a) (multiplicity1 1) (multiplicity2 *))
-  (association (source e) (target c) (multiplicity1 None) (multiplicity2 None))
-  (dependency (client e) (supplier d))
-  (composition (whole d) (part c) (multiplicity None))
-  (aggregation (whole d) (part b) (multiplicity None))
+  (attribute (id attr1) (class-name a) (name b_Collection) (visibility private) (type "ArrayList<b>"))
+  (class (name a) (attributes attr1) (operations ))
+  (attribute (id attr2) (class-name b) (name c_Collection) (visibility private) (type "TreeSet<c>"))
+  (class (name b) (attributes attr2) (operations ))
+  (attribute (id attr3) (class-name c) (name a_List) (visibility private) (type "LinkedList<a>"))
+  (class (name c) (attributes attr3) (operations ))
+  (composition (whole "a") (part "b") (multiplicity "*") (isOrdered "false"))
+  (composition (whole "b") (part "c") (multiplicity "*") (isOrdered "false"))
+  (aggregation (whole c) (part a) (multiplicity None))
+  (attribute (id "aggc_a") (class-name "c") (name "aList") (visibility "private") (type "LinkedList<a>"))
 )
 
 (defrule generate-java-code
-   
    ?class <- (class (name ?class-name) (attributes $?attributes) (operations $?operations))
    (generalization (parent ?class-name) (child ?x))
    =>
@@ -85,7 +69,7 @@
       (bind ?name (fact-slot-value ?attr name))
       (printout t  "   " ?visibility " " ?type " " ?name ";" crlf))
    
-   ;; Imprimir métodos
+   ;; Imprimir mÃ©todos
    (do-for-all-facts ((?op operation))
       (and
          (member$ (fact-slot-value ?op id) $?operations)
@@ -116,7 +100,7 @@
       (bind ?name (fact-slot-value ?attr name))
       (printout t  "   " ?visibility " " ?type " " ?name ";" crlf))
    
-   ;; Imprimir métodos
+   ;; Imprimir mÃ©todos
    (do-for-all-facts ((?op operation))
       (and
          (member$ (fact-slot-value ?op id) $?operations)

@@ -83,9 +83,11 @@ draw() {
     // Dibuja las flechas o adornos según el tipo de relación
     if (this.type === 'herencia') {
         drawInheritanceArrow(toX, toY, fromX, fromY);
-    } else if (this.type === 'composición') {
+    } else if (this.type === 'composicion') {
         drawCompositionDiamond(fromX, fromY, toX, toY);
-    } else if (this.type === 'agregación') {
+    } else if (this.type === 'composicionOrdenada') {
+        drawCompositionDiamond(fromX, fromY, toX, toY);
+    } else if (this.type === 'agregacion') {
         drawAgregationDiamond(fromX, fromY, toX, toY);
     } else if (this.type === 'dependencia' || this.type === 'asociaciónDireccional') {
         drawFlecha(fromX, fromY, toX, toY);
@@ -117,10 +119,10 @@ draw() {
             if (this.type === 'herencia') {
                 drawInheritanceArrow(toX, toY, fromX, fromY);
             }
-            if (this.type === 'composición') {
+            if (this.type === 'composicion') {
                 drawCompositionDiamond(fromX, fromY, toX, toY);
             }
-            if (this.type === 'agregación') {
+            if (this.type === 'agregacion') {
                 drawAgregationDiamond(fromX, fromY, toX, toY);
             }
             if (this.type === 'dependencia' || this.type === 'asociaciónDireccional') {
@@ -484,14 +486,12 @@ function generateXMI() {
             const [visibility, rest] = attr.split(' ');
             const [name, type] = rest.split(':');
             const escapedType = type ? escapeXML(type.trim()) : '';
-            console.log(`Attribute - Name: ${name}, Type: ${escapedType}`);
             xmi += `      <ownedAttribute visibility="${visibility}" name="${name.trim()}" type="${escapedType}" />\n`;
         });
         cls.methods.forEach(meth => {
             const [visibility, rest] = meth.split(' ');
             const [name, returnType] = rest.split(':');
             const escapedReturnType = returnType ? escapeXML(returnType.trim()) : '';
-            console.log(`Method - Name: ${name}, ReturnType: ${escapedReturnType}`);
             xmi += `      <ownedOperation visibility="${visibility}" name="${name.replace('()', '').trim()}" type="${escapedReturnType}" />\n`;
         });
         xmi += `    </packagedElement>\n`;
@@ -499,11 +499,16 @@ function generateXMI() {
 
     relations.forEach(rel => {
         let relationType = 'Association';
+        let isOrderedAttr = '';
+
         if (rel.type === 'herencia') {
             relationType = 'Generalization';
-        } else if (rel.type === 'composición') {
+        } else if (rel.type === 'composicion') {
             relationType = 'Composition';
-        } else if (rel.type === 'agregación') {
+        } else if (rel.type === 'composicionOrdenada') {
+            relationType = 'Composition';
+            isOrderedAttr = ' isOrdered="true"';
+        } else if (rel.type === 'agregacion') {
             relationType = 'Aggregation';
         } else if (rel.type === 'dependencia') {
             relationType = 'Dependency';
@@ -513,7 +518,7 @@ function generateXMI() {
 
         xmi += `    <packagedElement xmi:type="uml:${relationType}" memberEnd="${rel.fromClass.name} ${rel.toClass.name}">\n`;
         if ((relationType !== 'Generalization') &&  (relationType !== 'Dependency')) {
-            xmi += `      <ownedEnd type="${rel.fromClass.name}" multiplicity1="${rel.fromMultiplicity}" />\n`;
+            xmi += `      <ownedEnd type="${rel.fromClass.name}" multiplicity1="${rel.fromMultiplicity}"${isOrderedAttr} />\n`;
             xmi += `      <ownedEnd type="${rel.toClass.name}" multiplicity2="${rel.toMultiplicity}" />\n`;
         }
         xmi += `    </packagedElement>\n`;
